@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pepperfry Lead Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f4f3ef;--surface:#fff;--surface2:#f0efe9;--border:#e2dfd6;
+  --text:#1a1917;--text2:#5c5a55;--text3:#9e9b94;
+  --accent:#d4500a;--accent2:#f06d2a;--accent-soft:#fdf0ea;
+  --green:#2a7a3f;--green-bg:#eaf4ed;--green2:#1e5c2e;
+  --red:#b03030;--red-bg:#fceaea;
+  --amber:#8a5c0a;--amber-bg:#fdf3de;
+  --blue:#1a5fa8;--blue-bg:#e8f1fc;
+  --purple:#5c3db5;--purple-bg:#f0ecfd;
+  --teal:#0d7a7a;--teal-bg:#e0f5f5;
+  --r:10px;--rs:6px;
+  --sh:0 1px 3px rgba(0,0,0,.07),0 4px 14px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+/* NAV */
+nav{background:linear-gradient(135deg,#1a1917 0%,#2d2b28 100%);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px;position:sticky;top:0;z-index:300;}
+.logo{font-size:17px;font-weight:800;color:#fff;letter-spacing:-.4px;}
+.logo em{color:var(--accent2);font-style:normal;}
+.nav-badge{font-size:10px;font-weight:700;background:var(--accent);color:#fff;padding:3px 8px;border-radius:20px;letter-spacing:.05em;}
+.nav-sep{width:1px;height:20px;background:rgba(255,255,255,.15);}
+.nav-info{font-size:12px;color:rgba(255,255,255,.5);}
+.spacer{flex:1;}
+.nav-date{font-size:12px;color:rgba(255,255,255,.4);}
+
+/* LAYOUT */
+.wrapper{max-width:1400px;margin:0 auto;padding:22px 20px;}
+
+/* UPLOAD */
+.upload-card{background:linear-gradient(135deg,#1a1917,#2d2b28);border-radius:var(--r);padding:40px;text-align:center;margin-bottom:24px;color:#fff;}
+.upload-card h2{font-size:24px;font-weight:700;margin-bottom:8px;}
+.upload-card h2 em{color:var(--accent2);font-style:normal;}
+.upload-card p{font-size:14px;color:rgba(255,255,255,.6);margin-bottom:28px;line-height:1.6;}
+.drop-zone{border:2px dashed rgba(255,255,255,.2);border-radius:var(--r);padding:40px 24px;cursor:pointer;transition:all .2s;position:relative;background:rgba(255,255,255,.04);}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent2);background:rgba(212,80,10,.1);}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-zone .dicon{font-size:44px;margin-bottom:14px;}
+.drop-zone strong{display:block;font-size:16px;margin-bottom:6px;color:#fff;}
+.drop-zone span{font-size:13px;color:rgba(255,255,255,.4);}
+.feat-row{display:flex;gap:24px;margin-top:28px;flex-wrap:wrap;justify-content:center;}
+.feat{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.5);}
+.feat span{width:6px;height:6px;border-radius:50%;background:var(--accent2);flex-shrink:0;}
+
+/* FILE BAR */
+.file-bar{display:none;background:var(--green-bg);border:1px solid #b8dfc3;border-radius:var(--rs);padding:12px 16px;align-items:center;gap:12px;margin-bottom:24px;}
+.file-bar.show{display:flex;}
+.finfo{flex:1;}
+.finfo strong{display:block;font-size:14px;}
+.finfo small{font-size:12px;color:var(--text2);}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;}
+.kpi.accent::before{background:var(--accent);}
+.kpi.green::before{background:var(--green);}
+.kpi.blue::before{background:var(--blue);}
+.kpi.amber::before{background:var(--amber);}
+.kpi.red::before{background:var(--red);}
+.kpi.purple::before{background:var(--purple);}
+.kpi.teal::before{background:var(--teal);}
+.kpi .knum{font-size:26px;font-weight:800;line-height:1;margin-bottom:4px;}
+.kpi.accent .knum{color:var(--accent);}
+.kpi.green .knum{color:var(--green);}
+.kpi.blue .knum{color:var(--blue);}
+.kpi.amber .knum{color:var(--amber);}
+.kpi.red .knum{color:var(--red);}
+.kpi.purple .knum{color:var(--purple);}
+.kpi.teal .knum{color:var(--teal);}
+.kpi .klbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.kpi .ksub{font-size:11px;color:var(--text3);}
+
+/* SMART KPI */
+.smart-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px;}
+.smart-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);}
+.smart-kpi .sk-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px;}
+.smart-kpi .sk-val{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;line-height:1.3;}
+.smart-kpi .sk-sub{font-size:11px;color:var(--text3);}
+.smart-kpi .sk-icon{font-size:22px;float:right;margin-top:-4px;}
+
+/* SECTION */
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin:24px 0 12px;flex-wrap:wrap;gap:8px;}
+.section-hdr h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);}
+.ctx-tag{font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:20px;}
+
+/* CHARTS ROW */
+.charts-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:24px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh);}
+.chart-card h4{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--text);}
+.chart-card canvas{max-height:220px;}
+@media(max-width:900px){.charts-row{grid-template-columns:1fr;}}
+
+/* FILTERS */
+.filters-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:20px;box-shadow:var(--sh);}
+.filters-card .fc-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.filters-card .fc-head h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);}
+.filters-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.fg{display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px;}
+.fg label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;}
+.fg select,.fg input{border:1px solid var(--border);border-radius:var(--rs);padding:7px 9px;font-size:13px;background:#fff;color:var(--text);outline:none;height:34px;}
+.fg select:focus,.fg input:focus{border-color:var(--accent);}
+.abtn{background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:0 20px;font-size:13px;font-weight:700;cursor:pointer;height:34px;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:opacity .15s;letter-spacing:.02em;}
+.abtn:hover{opacity:.88;}
+.abtn:disabled{opacity:.4;cursor:not-allowed;}
+.spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.reset-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:var(--rs);padding:0 14px;font-size:12px;height:34px;cursor:pointer;}
+.reset-btn:hover{background:var(--border);}
+
+/* AI INSIGHTS */
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:24px;}
+.ic{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);}
+.ic .ict{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;}
+.ic .ictitle{font-size:14px;font-weight:600;flex:1;line-height:1.3;}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;letter-spacing:.04em;}
+.bwon{background:var(--green-bg);color:var(--green);}
+.blost{background:var(--red-bg);color:var(--red);}
+.bfu{background:var(--amber-bg);color:var(--amber);}
+.bissue{background:var(--red-bg);color:var(--red);}
+.bcf{background:var(--surface2);color:var(--text2);}
+.bopp{background:var(--blue-bg);color:var(--blue);}
+.bpat{background:var(--purple-bg);color:var(--purple);}
+.ic .icbody{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:10px;}
+.ic .icmeta{display:flex;gap:6px;flex-wrap:wrap;}
+.mp{font-size:11px;background:var(--surface2);color:var(--text3);padding:2px 8px;border-radius:20px;}
+
+/* BREAKDOWN TABS */
+.btabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--rs);padding:3px;width:fit-content;margin-bottom:14px;}
+.btab{font-size:12px;font-weight:600;padding:5px 14px;border-radius:4px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .15s;}
+.btab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.bpane{display:none;}
+.bpane.active{display:block;}
+.bkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:24px;}
+.bkcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:14px 16px;box-shadow:var(--sh);}
+.bkcard .bn{font-weight:700;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bkcard .bs{font-size:11px;color:var(--text3);margin-bottom:8px;}
+.bkcard .badge-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.sbars{display:flex;flex-direction:column;gap:4px;}
+.srow{display:flex;align-items:center;gap:7px;}
+.slbl{font-size:10px;color:var(--text3);width:90px;flex-shrink:0;}
+.sbw{flex:1;background:var(--bg);border-radius:3px;height:4px;overflow:hidden;}
+.sb{height:100%;border-radius:3px;transition:width .6s ease;}
+.sb.g{background:var(--green);}
+.sb.r{background:#e24b4a;}
+.sb.a{background:#ef9f27;}
+.sb.b{background:#378add;}
+.sb.p{background:var(--purple);}
+.sval{font-size:11px;font-weight:700;width:34px;text-align:right;}
+
+/* LEAD TABLE */
+.table-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);margin-bottom:28px;}
+.table-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--surface2);}
+.table-header h3{font-size:13px;font-weight:700;}
+.thr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.ctag{font-size:11px;color:var(--text3);}
+.ebtn{font-size:12px;font-weight:600;color:var(--blue);border:1px solid #c5d8f2;background:var(--blue-bg);padding:5px 12px;border-radius:var(--rs);cursor:pointer;}
+.ebtn:hover{opacity:.8;}
+.vlegend{display:flex;gap:8px;flex-wrap:wrap;padding:8px 18px;border-bottom:1px solid var(--border);background:#fafaf8;align-items:center;}
+.vli{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);}
+.vldot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.tscroll{overflow-x:auto;max-height:560px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:var(--surface2);padding:9px 11px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:10;}
+tbody tr{border-bottom:1px solid var(--border);}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:#fafaf8;}
+tbody td{padding:8px 11px;vertical-align:middle;line-height:1.4;}
+.tdid{font-family:monospace;font-size:10px;color:var(--text3);white-space:nowrap;}
+.tdname{font-weight:600;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis;}
+.tdstudio{white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:11px;}
+.tdam{white-space:nowrap;font-size:11px;color:var(--text2);}
+.tdcomment{max-width:240px;}
+.ctext{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;color:var(--text2);font-size:12px;line-height:1.45;}
+.ctext.exp{display:block;-webkit-line-clamp:unset;}
+.spill{display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:20px;}
+.sc{background:var(--green-bg);color:var(--green);}
+.so{background:var(--amber-bg);color:var(--amber);}
+.mtp{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;}
+.mtp-co{background:#e8f4fd;color:#1a5fa8;}
+.mtp-fr{background:#f3ecfd;color:#5c3db5;}
+.mtp-bop{background:#fdf0ea;color:#d4500a;}
+
+/* VERIFICATION DROPDOWN */
+.vsel{border:1px solid var(--border);border-radius:20px;padding:3px 20px 3px 8px;font-size:11px;font-weight:600;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 5px center;min-width:130px;}
+.vsp{background:#f0efe9;color:#6b6860;border-color:#ddd;}
+.vsg{background:var(--green-bg);color:var(--green);border-color:#b8dfc3;}
+.vsr{background:var(--red-bg);color:var(--red);border-color:#f0c0c0;}
+.vsf{background:var(--amber-bg);color:var(--amber);border-color:#e8d0a0;}
+.vse{background:var(--purple-bg);color:var(--purple);border-color:#c9b8f0;}
+.vsfk{background:#fdf0f0;color:#8b0000;border-color:#f0b0b0;}
+.vsge{background:var(--blue-bg);color:var(--blue);border-color:#b0cef0;}
+.vsla{background:var(--teal-bg);color:var(--teal);border-color:#a0dada;}
+
+/* AI CLASS TAG */
+.ai-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;}
+.ai-order{background:#d4edda;color:#1e5c2e;}
+.ai-interested{background:#dce8f8;color:#1a5fa8;}
+.ai-callback{background:#fff3cd;color:#7a4f00;}
+.ai-ni{background:#fce8e8;color:#8b1a1a;}
+.ai-nc{background:#e9ecef;color:#495057;}
+.ai-lazy{background:#f8d7da;color:#721c24;}
+.ai-escalate{background:#ede0fa;color:#4a1f8e;}
+.ai-fake{background:#fff0f0;color:#8b0000;}
+.ai-genuine{background:#e0f4f4;color:#0d7a7a;}
+
+/* AI SCORE */
+.qscore{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;}
+.qs-dot{width:8px;height:8px;border-radius:50%;}
+.qs-5{color:#1e5c2e;} .qs-dot.qs-5{background:#2a7a3f;}
+.qs-4{color:#1a5fa8;} .qs-dot.qs-4{background:#378add;}
+.qs-3{color:#8a5c0a;} .qs-dot.qs-3{background:#ef9f27;}
+.qs-2{color:#b03030;} .qs-dot.qs-2{background:#e24b4a;}
+.qs-1{color:#8b0000;} .qs-dot.qs-1{background:#c0392b;}
+
+/* VERIFY SUMMARY */
+.vsummary{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:20px;}
+.vsbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;text-align:center;box-shadow:var(--sh);}
+.vsbox .vsnum{font-size:20px;font-weight:800;}
+.vsbox .vslbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;}
+
+/* FUNNEL */
+.funnel-wrap{display:flex;flex-direction:column;gap:6px;}
+.funnel-step{display:flex;align-items:center;gap:10px;}
+.funnel-bar-wrap{flex:1;background:var(--bg);border-radius:4px;height:28px;overflow:hidden;position:relative;}
+.funnel-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:10px;font-size:12px;font-weight:700;color:#fff;transition:width .8s ease;white-space:nowrap;overflow:hidden;}
+.funnel-lbl{font-size:12px;font-weight:600;width:110px;flex-shrink:0;text-align:right;}
+.funnel-num{font-size:12px;font-weight:700;width:50px;text-align:right;flex-shrink:0;}
+.funnel-pct{font-size:10px;color:var(--text3);width:38px;text-align:right;flex-shrink:0;}
+
+/* MISC */
+.error-bar{background:var(--red-bg);border:1px solid #f7c1c1;border-radius:var(--rs);padding:12px 16px;color:var(--red);font-size:13px;margin-bottom:20px;display:none;}
+.error-bar.show{display:block;}
+.loading-pulse{grid-column:1/-1;text-align:center;padding:36px;color:var(--text3);font-size:14px;}
+.loading-pulse div{font-size:28px;margin-bottom:10px;}
+@media(max-width:640px){.filters-row{flex-direction:column;}.abtn{width:100%;justify-content:center;}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🪑 Pepperfry <em>Lead Intelligence</em></div>
+  <span class="nav-badge">AI POWERED</span>
+  <div class="nav-sep"></div>
+  <span class="nav-info" id="navInfo">No data loaded</span>
+  <div class="spacer"></div>
+  <span class="nav-date" id="navDate"></span>
+  <button onclick="const b=$('ghBanner');b.style.display=b.style.display==='none'?'flex':'none'" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;">🐙 GitHub</button>
+</nav>
+
+<div id="ghBanner" style="background:#0d1117;color:#c9d1d9;padding:12px 24px;display:none;align-items:center;gap:16px;font-size:12px;flex-wrap:wrap;">
+  <span style="color:#58a6ff;font-weight:700;">🐙 GitHub Pages Setup</span>
+  <span style="color:#8b949e;">1. Create a repo → upload this HTML file as <code style="background:#161b22;padding:1px 5px;border-radius:3px;color:#79c0ff">index.html</code></span>
+  <span style="color:#8b949e;">2. Go to Settings → Pages → Deploy from main branch</span>
+  <span style="color:#8b949e;">3. Share the URL — anyone can upload CSV and analyze!</span>
+  <span style="color:#3fb950;font-weight:600;">✓ No server needed · Data stays in browser · Free hosting</span>
+  <button onclick="$('ghBanner').style.display='none'" style="margin-left:auto;background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;">✕ Close</button>
+</div>
+<div class="wrapper">
+
+<!-- UPLOAD -->
+<div class="upload-card" id="uploadCard">
+  <h2>Lead Comment <em>Intelligence</em> Dashboard</h2>
+  <p>Complete CRM analytics with AI comment classification, studio/AM performance,<br>market type breakdown, lead funnel, and smart KPIs.</p>
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".csv"/>
+    <div class="dicon">📂</div>
+    <strong>Click to upload or drag & drop your CSV</strong>
+    <span>Supports LeadDetailsCsvData-*.csv — 145 studios auto-mapped</span>
+  </div>
+  <div class="feat-row">
+    <div class="feat"><span></span>Studio Code → AM Auto-Mapping</div>
+    <div class="feat"><span></span>Market Type (Mega / Emerging / BOP)</div>
+    <div class="feat"><span></span>AI Comment Classification</div>
+    <div class="feat"><span></span>Lead Funnel Charts</div>
+    <div class="feat"><span></span>Smart KPI Cards</div>
+    <div class="feat"><span></span>Comment Quality Score 1–5</div>
+    <div class="feat"><span></span>Table shown instantly on upload</div>
+    <div class="feat"><span></span>Works on GitHub Pages — share with anyone</div>
+  </div>
+</div>
+
+<div class="file-bar" id="fileBar">
+  <span style="font-size:22px">✅</span>
+  <div class="finfo"><strong id="fbName">—</strong><small id="fbMeta">—</small></div>
+  <span style="font-size:12px;color:var(--green);font-weight:600">Loaded & Mapped</span>
+</div>
+<div class="error-bar" id="errorBar"></div>
+
+<!-- KPI CARDS -->
+<div id="kpiSection" style="display:none">
+  <div class="kpi-grid">
+    <div class="kpi accent"><div class="klbl">Total Leads</div><div class="knum" id="kTotal">0</div><div class="ksub">All uploaded leads</div></div>
+    <div class="kpi green"><div class="klbl">Orders</div><div class="knum" id="kOrders">0</div><div class="ksub" id="kOrdersPct">—</div></div>
+    <div class="kpi blue"><div class="klbl">Interested</div><div class="knum" id="kInterested">0</div><div class="ksub">In buying stage</div></div>
+    <div class="kpi teal"><div class="klbl">Connected</div><div class="knum" id="kConnected">0</div><div class="ksub">Reached customer</div></div>
+    <div class="kpi amber"><div class="klbl">Call Back</div><div class="knum" id="kCallBack">0</div><div class="ksub">Pending follow-up</div></div>
+    <div class="kpi red"><div class="klbl">Not Interested</div><div class="knum" id="kNI">0</div><div class="ksub">Lost leads</div></div>
+    <div class="kpi purple"><div class="klbl">Non Contactable</div><div class="knum" id="kNC">0</div><div class="ksub">NC + Dialer NC</div></div>
+    <div class="kpi"><div class="klbl">Studios Mapped</div><div class="knum" id="kStudios">0</div><div class="ksub">With AM assigned</div></div>
+  </div>
+
+  <!-- SMART KPIs -->
+  <div class="section-hdr"><h3>🎯 Smart KPI Cards</h3></div>
+  <div class="smart-kpi-grid" id="smartKpiGrid"></div>
+
+  <!-- CHARTS -->
+  <div class="section-hdr"><h3>📊 Dashboard Charts</h3></div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <h4>🔻 Lead Funnel</h4>
+      <div class="funnel-wrap" id="funnelWrap"></div>
+    </div>
+    <div class="chart-card">
+      <h4>🍩 Market Type Split</h4>
+      <canvas id="marketChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h4>🔵 Studio Type Split</h4>
+      <canvas id="studioTypeChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters-card" id="filtersCard" style="display:none">
+  <div class="fc-head">
+    <h3>🔍 Filter & Analyze</h3>
+    <span style="font-size:11px;color:var(--text3)">All filters combine — mix and match freely</span>
+  </div>
+  <div class="filters-row">
+    <div class="fg"><label>Studio</label><select id="fStudio"><option value="">All Studios</option></select></div>
+    <div class="fg"><label>City</label><select id="fCity"><option value="">All Cities</option></select></div>
+    <div class="fg"><label>Area Manager</label><select id="fAM"><option value="">All AMs</option></select></div>
+    <div class="fg"><label>Market Type</label>
+      <select id="fMarket">
+        <option value="">All Markets</option>
+        <option value="Mega Markets">🏢 Mega Markets (COCO)</option>
+        <option value="Emerging Markets">🤝 Emerging Markets (FOFO)</option>
+        <option value="Buy On Phone">📞 Buy On Phone</option>
+      </select>
+    </div>
+    <div class="fg"><label>Studio Type</label>
+      <select id="fStudioType">
+        <option value="">All Types</option>
+        <option value="COCO">COCO (Company Owned)</option>
+        <option value="FOFO">FOFO (Franchise)</option>
+        <option value="Virtual">Virtual (BOP)</option>
+      </select>
+    </div>
+    <div class="fg"><label>Status</label>
+      <select id="fStatus"><option value="">All</option><option value="Closed">Closed</option><option value="Open">Open</option></select>
+    </div>
+    <div class="fg"><label>Stage</label><select id="fStage"><option value="">All Stages</option></select></div>
+    <div class="fg"><label>AI Comment Category</label>
+      <select id="fAITag">
+        <option value="">All Categories</option>
+        <option value="order">✅ Order Placed</option>
+        <option value="interested">🎯 Interested</option>
+        <option value="callback">⏰ Callback</option>
+        <option value="ni">❌ Not Interested</option>
+        <option value="nc">📵 Non Contactable</option>
+        <option value="lazy">⚠️ Lazy Comment</option>
+        <option value="escalate">🔴 Escalate</option>
+        <option value="genuine">💬 Genuine Interest</option>
+      </select>
+    </div>
+    <div class="fg"><label>Verify Status</label>
+      <select id="fVerify">
+        <option value="">All</option>
+        <option value="pending">⬜ Pending</option>
+        <option value="good">✅ Good</option>
+        <option value="poor">❌ Poor</option>
+        <option value="followup">⏰ Follow-up</option>
+        <option value="escalate">🔴 Escalate</option>
+        <option value="lazy">⚠️ Lazy</option>
+        <option value="genuine">💬 Genuine</option>
+      </select>
+    </div>
+    <div class="fg"><label>Lead IDs</label><input type="text" id="fLeadId" placeholder="4411985, 4411984"/></div>
+    <div class="fg"><label>Date From</label><input type="date" id="fDateFrom"/></div>
+    <div class="fg"><label>Date To</label><input type="date" id="fDateTo"/></div>
+    <button class="abtn" id="analyzeBtn" onclick="runAnalysis()"><span>✨ Analyze</span></button>
+    <button class="reset-btn" onclick="resetFilters()">Reset</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="resultsSection" style="display:none">
+  <div class="section-hdr">
+    <h3 id="resultsTitle">🤖 AI Comment Insights</h3>
+    <span class="ctx-tag" id="resultsCtx"></span>
+  </div>
+  <div class="insights-grid" id="insightsGrid"></div>
+
+  <!-- BREAKDOWN TABS -->
+  <div class="section-hdr"><h3>📊 Performance Breakdown</h3></div>
+  <div class="btabs">
+    <button class="btab active" onclick="switchTab('am')">By Area Manager</button>
+    <button class="btab" onclick="switchTab('studio')">By Studio</button>
+    <button class="btab" onclick="switchTab('market')">By Market Type</button>
+    <button class="btab" onclick="switchTab('verify')">By Verification</button>
+  </div>
+  <div id="paneAM" class="bpane active"><div class="bkgrid" id="amGrid"></div></div>
+  <div id="paneStudio" class="bpane"><div class="bkgrid" id="studioGrid"></div></div>
+  <div id="paneMarket" class="bpane"><div class="bkgrid" id="marketGrid"></div></div>
+  <div id="paneVerify" class="bpane"><div class="vsummary" id="verifySummary"></div></div>
+
+  <!-- LEAD TABLE -->
+  <div class="table-section">
+    <div class="table-header" style="background:linear-gradient(135deg,#1a1917,#2d2b28);">
+      <h3 style="color:#fff;display:flex;align-items:center;gap:10px;">
+        📋 Lead Data Table
+        <span style="font-size:10px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);padding:2px 8px;border-radius:10px;font-weight:400">Click any comment to expand · Verify dropdowns save your review</span>
+      </h3>
+      <div class="thr">
+        <span class="ctag" id="tableCount" style="color:rgba(255,255,255,.5)"></span>
+        <button class="ebtn" onclick="exportCSV()" style="background:var(--green-bg);color:var(--green);border-color:#b8dfc3;font-weight:700;">⬇ Export CSV with Tags</button>
+        <button onclick="copyTableToClipboard()" style="font-size:12px;font-weight:600;color:var(--blue);border:1px solid #c5d8f2;background:var(--blue-bg);padding:5px 12px;border-radius:var(--rs);cursor:pointer;">📋 Copy Table</button>
+      </div>
+    </div>
+    <div style="padding:8px 18px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;color:var(--text3);">🔎 Quick Search:</span>
+      <input type="text" id="tableSearch" placeholder="Search lead ID, name, comment, studio…" oninput="quickSearch(this.value)"
+        style="flex:1;min-width:200px;max-width:400px;border:1px solid var(--border);border-radius:var(--rs);padding:5px 10px;font-size:12px;outline:none;"/>
+      <span id="searchCount" style="font-size:11px;color:var(--text3);"></span>
+      <button onclick="$('tableSearch').value='';quickSearch('')" style="font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;">✕ Clear</button>
+    </div>
+    <div class="vlegend">
+      <span style="font-size:11px;font-weight:700;color:var(--text2);margin-right:4px;">Verify:</span>
+      <span class="vli"><span class="vldot" style="background:#ccc"></span>Pending</span>
+      <span class="vli"><span class="vldot" style="background:var(--green)"></span>Good</span>
+      <span class="vli"><span class="vldot" style="background:var(--red)"></span>Poor</span>
+      <span class="vli"><span class="vldot" style="background:#ef9f27"></span>Follow-up</span>
+      <span class="vli"><span class="vldot" style="background:var(--purple)"></span>Escalate</span>
+      <span class="vli"><span class="vldot" style="background:#8b0000"></span>Lazy</span>
+      <span class="vli"><span class="vldot" style="background:var(--teal)"></span>Genuine</span>
+      <span style="font-size:10px;color:var(--text3);margin-left:8px;">AI Class = auto-detected comment type · Q = comment quality 1-5</span>
+    </div>
+    <div class="tscroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Lead ID</th><th>Name</th><th>Studio</th><th>City</th>
+            <th>Market</th><th>Area Manager</th><th>Agent</th>
+            <th>Status</th><th>Stage</th>
+            <th>Agent Comment</th>
+            <th>AI Class</th><th>Q</th>
+            <th>Verify ↓</th>
+          </tr>
+        </thead>
+        <tbody id="leadTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STORE MAPPING (145 studios, auto-mapped from your CSV data)
+// ═══════════════════════════════════════════════════════════
+const STORE_MAP = [{"StoreCode": "CO001", "Studio": "Pepperfry JP Nagar", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO002", "Studio": "Pepperfry S.G. Road", "City": "Ahmedabad", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "COCO"}, {"StoreCode": "CO003", "Studio": "Pepperfry Malad", "City": "Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO004", "Studio": "Pepperfry Lower Parel", "City": "Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO005", "Studio": "Pepperfry Chikuwadi", "City": "Vadodara", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "COCO"}, {"StoreCode": "CO008", "Studio": "Pepperfry Thane Ghodbunder", "City": "Thane", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO010", "Studio": "Pepperfry S.B Road", "City": "Pune", "AM": "Utkarsh Tripathi", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO011", "Studio": "Pepperfry Salt Lake", "City": "Kolkata", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "COCO"}, {"StoreCode": "CO013", "Studio": "Pepperfry Topsia Road", "City": "Kolkata", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "COCO"}, {"StoreCode": "CO015", "Studio": "Pepperfry Kirti Nagar", "City": "New Delhi", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO016", "Studio": "Pepperfry Vashi", "City": "Navi Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO017", "Studio": "Pepperfry Kharghar", "City": "Navi Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO018", "Studio": "Pepperfry Bandra", "City": "Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO022", "Studio": "Pepperfry Indiranagar", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO024", "Studio": "Pepperfry Kothaguda", "City": "Hyderabad", "AM": "Vicky Jha", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO026", "Studio": "Pepperfry Whitefield", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO027", "Studio": "Pepperfry KNK Road", "City": "Chennai", "AM": "Gaurav Gupta", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO029", "Studio": "Pepperfry Borivali", "City": "Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO030", "Studio": "Pepperfry Juhu", "City": "Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO032", "Studio": "Pepperfry Bhandup", "City": "Mumbai", "AM": "Trevor", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO033", "Studio": "Pepperfry Banaswadi", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO036", "Studio": "Pepperfry Thanisandra", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO039", "Studio": "Pepperfry Banjara Hills", "City": "Hyderabad", "AM": "Vicky Jha", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO052", "Studio": "Pepperfry Dwarka", "City": "New Delhi", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO055", "Studio": "Pepperfry Wakad", "City": "Pune", "AM": "Utkarsh Tripathi", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO056", "Studio": "Pepperfry Raidurgam", "City": "Hyderabad", "AM": "Vicky Jha", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO058", "Studio": "Pepperfry Yelahanka", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO066", "Studio": "Pepperfry ECR", "City": "Chennai", "AM": "Gaurav Gupta", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO070", "Studio": "Pepperfry Adyar", "City": "Chennai", "AM": "Gaurav Gupta", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO074", "Studio": "Pepperfry Baner", "City": "Pune", "AM": "Utkarsh Tripathi", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO075", "Studio": "Pepperfry Golf Course Road", "City": "Gurugram", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "CO089", "Studio": "Pepperfry Gachibowli", "City": "Hyderabad", "AM": "Vicky Jha", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "FR065", "Studio": "Pepperfry SS Plaza", "City": "Gurugram", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "FR002", "Studio": "Pepperfry HSR Layout", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "FR004", "Studio": "Pepperfry Vijay Nagar", "City": "Indore", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR007", "Studio": "Pepperfry Yerwada", "City": "Pune", "AM": "Utkarsh Tripathi", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR012", "Studio": "Pepperfry Airport Road", "City": "Imphal", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR014", "Studio": "Pepperfry Kesavadasapuram", "City": "Thiruvananthapuram", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR016", "Studio": "Pepperfry Vaishali Nagar", "City": "Jaipur", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR022", "Studio": "Pepperfry G.S. Road", "City": "Guwahati", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR024", "Studio": "Pepperfry Gwalior", "City": "Gwalior", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR025", "Studio": "Pepperfry Shillong", "City": "Shillong", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR030", "Studio": "Pepperfry Rajpur Road", "City": "Dehradun", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR033", "Studio": "Pepperfry Dimapur", "City": "Dimapur", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR037", "Studio": "Pepperfry Kunjwani", "City": "Jammu", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR039", "Studio": "Pepperfry Rajkot", "City": "Rajkot", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR042", "Studio": "Pepperfry Miyapur", "City": "Hyderabad", "AM": "Vicky Jha", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR044", "Studio": "Pepperfry Bhopal", "City": "Bhopal", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR049", "Studio": "Pepperfry RS Puram", "City": "Coimbatore", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR058", "Studio": "Pepperfry Jamshedpur", "City": "Jamshedpur", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR061", "Studio": "Pepperfry Law College Square", "City": "Nagpur", "AM": "Karansingh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR067", "Studio": "Pepperfry Amritsar", "City": "Amritsar", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR074", "Studio": "Pepperfry Porvorim", "City": "Porvorim", "AM": "Karansingh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR075", "Studio": "Pepperfry Agartala", "City": "Agartala", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR076", "Studio": "Pepperfry Unit IV", "City": "Bhubaneshwar", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR077", "Studio": "Pepperfry Tura", "City": "Tura", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR079", "Studio": "Pepperfry Tinsukia", "City": "Tinsukia", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR085", "Studio": "Pepperfry Aizawl Bawngkawn", "City": "Aizawl", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR087", "Studio": "Pepperfry Sodepur", "City": "Kolkata", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR089", "Studio": "Pepperfry Edappally", "City": "Kochi", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR108", "Studio": "Pepperfry Bhopal JK Road", "City": "Bhopal", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR115", "Studio": "Pepperfry Aurangabad", "City": "Aurangabad", "AM": "Karansingh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR117", "Studio": "Pepperfry Pune Magarpatta", "City": "Pune", "AM": "Utkarsh Tripathi", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "FR118", "Studio": "Pepperfry Balasore", "City": "Balasore", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR119", "Studio": "Pepperfry Patiala Focal Point", "City": "Patiala", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR120", "Studio": "Pepperfry Guntur", "City": "Guntur", "AM": "Karansingh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR121", "Studio": "Pepperfry Rajahmundry", "City": "Rajahmundry", "AM": "Karansingh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR122", "Studio": "Pepperfry Khandagiri", "City": "Bhubaneshwar", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR124", "Studio": "Pepperfry Kanjirapally", "City": "Kottayam", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR126", "Studio": "Pepperfry Wardha Road", "City": "Nagpur", "AM": "Karansingh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR127", "Studio": "Pepperfry Velachery", "City": "Chennai", "AM": "Gaurav Gupta", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR128", "Studio": "Pepperfry Mohali", "City": "Mohali", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR129", "Studio": "Pepperfry Mantripukhri Imphal", "City": "Imphal", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR130", "Studio": "Pepperfry Chhindwara", "City": "Chhindwara", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR132", "Studio": "Pepperfry RR Nagar", "City": "Bengaluru", "AM": "Mourya Mallick", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR141", "Studio": "Pepperfry Faridabad", "City": "Faridabad", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR146", "Studio": "Pepperfry Kota", "City": "Kota", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR148", "Studio": "Pepperfry Kalikapur", "City": "Kolkata", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR149", "Studio": "Pepperfry Jabalpur", "City": "Jabalpur", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR155", "Studio": "Pepperfry Sector 104", "City": "Noida", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR157", "Studio": "Pepperfry Ludhiana", "City": "Ludhiana", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR159", "Studio": "Pepperfry Siliguri", "City": "Siliguri", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR160", "Studio": "Pepperfry Cuttack Nakhara", "City": "Cuttack", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR164", "Studio": "Pepperfry Sector 66", "City": "Gurugram", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR165", "Studio": "Pepperfry Sivasagar", "City": "Sivasagar", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR166", "Studio": "Pepperfry Surat", "City": "Surat", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR173", "Studio": "Pepperfry Ujjain", "City": "Ujjain", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR180", "Studio": "Pepperfry Alappuzha", "City": "Alappuzha", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR182", "Studio": "Pepperfry Itanagar", "City": "Itanagar", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR184", "Studio": "Pepperfry Tumakuru", "City": "Tumakuru", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR185", "Studio": "Pepperfry Angul", "City": "Angul", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR186", "Studio": "Pepperfry Hambran Road Ludhiana", "City": "Ludhiana", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR188", "Studio": "Pepperfry KOLKATA VIP ROAD", "City": "Kolkata", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR189", "Studio": "Pepperfry Berhampur", "City": "Berhampur", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR190", "Studio": "Pepperfry Belagavi", "City": "Belagavi", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR191", "Studio": "Pepperfry Shimla", "City": "Shimla", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR192", "Studio": "Pepperfry Chakrata Road", "City": "Dehradun", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR193", "Studio": "Pepperfry Kamalgazi (Kolkata)", "City": "Kolkata", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR194", "Studio": "Pepperfry Agra", "City": "Agra", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR195", "Studio": "Pepperfry Valsarvakkam", "City": "Chennai", "AM": "Gaurav Gupta", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR196", "Studio": "Pepperfry Guwahati VIP Road", "City": "Guwahati", "AM": "Chingkhei W", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR197", "Studio": "Pepperfry Patia Bhubaneshwar", "City": "Bhubaneshwar", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR199", "Studio": "Pepperfry Patna Bihar", "City": "Patna", "AM": "Sumit Ganguly", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR200", "Studio": "Pepperfry Greater Noida", "City": "Noida", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR206", "Studio": "Pepperfry CBD Mall  Ahmedabad", "City": "Ahmedabad", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR205", "Studio": "Pepperfry Palakkad", "City": "Palakkad", "AM": "Ashwin Nair", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR204", "Studio": "Pepperfry Sector 10", "City": "Noida", "AM": "Utkarsh - North", "MarketType": "Mega Markets", "StudioType": "FOFO"}, {"StoreCode": "FR203", "Studio": "Pepperfry Panchkula", "City": "Panchkula", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR201", "Studio": "Pepperfry YMCA Ahmedabad", "City": "Ahmedabad", "AM": "TBH", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "FR207", "Studio": "Pepperfry Jalandhar", "City": "Jalandhar", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "CO090", "Studio": "Pepperfry Phursungi Chowk", "City": "Pune", "AM": "Utkarsh Tripathi", "MarketType": "Mega Markets", "StudioType": "COCO"}, {"StoreCode": "FR208", "Studio": "Pepperfry New Chandigarh", "City": "Chandigarh", "AM": "Punjeet Singh", "MarketType": "Emerging Markets", "StudioType": "FOFO"}, {"StoreCode": "CO077", "Studio": "Buy On Phone", "City": "Mumbai", "AM": "Buy On Phone Team", "MarketType": "Buy On Phone", "StudioType": "Virtual"}];
+const storeIndex = {};
+STORE_MAP.forEach(s => { storeIndex[s['Store Code']] = s; });
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let allRows=[], headers={}, currentFiltered=[], verifyMap={}, aiTagCache={};
+let marketChartInst=null, studioTypeChartInst=null;
+const $=id=>document.getElementById(id);
+
+// Date
+$('navDate').textContent = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+
+// ═══════════════════════════════════════════════════════════
+// FILE LOAD
+// ═══════════════════════════════════════════════════════════
+const dz=$('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
+$('fileInput').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+
+function showErr(m){const b=$('errorBar');b.textContent='⚠️ '+m;b.classList.add('show');}
+function hideErr(){$('errorBar').classList.remove('show');}
+
+function parseCSV(text){
+  const rows=[];let inQ=false,cur='',row=[];
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(c==='"'){if(inQ&&text[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(c===','&&!inQ){row.push(cur);cur='';}
+    else if((c==='\n'||c==='\r')&&!inQ){row.push(cur);if(row.some(x=>x.trim()))rows.push(row);cur='';row=[];if(c==='\r'&&text[i+1]==='\n')i++;}
+    else cur+=c;
+  }
+  if(cur||row.length>1){row.push(cur);rows.push(row);}
+  return rows;
+}
+
+function loadFile(file){
+  hideErr();
+  if(!file.name.match(/\.csv$/i)){showErr('Please upload a .csv file.');return;}
+  const r=new FileReader();r.onload=e=>processCSV(e.target.result,file.name);r.readAsText(file,'UTF-8');
+}
+
+function col(name){
+  const k=Object.keys(headers).find(k=>k.trim().toLowerCase()===name.toLowerCase());
+  return k!==undefined?headers[k]:-1;
+}
+function gv(row,name){
+  const i=col(name);if(i===-1||i>=row.length)return'';
+  return(row[i]||'').trim().replace(/^"|"$/g,'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,'').trim();
+}
+
+function enrichRow(row){
+  const code=gv(row,'Store Code');
+  const m=storeIndex[code];
+  return m||{AM:gv(row,'Lead Supervisor')||'Unassigned',MarketType:'Unknown',StudioType:'Unknown'};
+}
+
+function processCSV(text,fname){
+  const rows=parseCSV(text);
+  if(!rows.length){showErr('File is empty.');return;}
+  const hRow=rows[0].map(h=>h.trim().replace(/^"|"$/g,''));
+  headers={};hRow.forEach((h,i)=>headers[h]=i);
+  if(col('Agent Comment')===-1){showErr('No "Agent Comment" column found.');return;}
+  allRows=rows.slice(1).filter(r=>r.length>3);
+  verifyMap={};aiTagCache={};
+
+  const withC=allRows.filter(r=>gv(r,'Agent Comment').length>2).length;
+  $('fbName').textContent=fname;
+  $('fbMeta').textContent=`${allRows.length.toLocaleString()} leads · ${withC.toLocaleString()} with comments · 145 studios mapped`;
+  $('fileBar').classList.add('show');
+  $('uploadCard').style.display='none';
+  $('navInfo').textContent=`${allRows.length.toLocaleString()} leads loaded`;
+
+  buildKPIs(allRows);
+  buildCharts(allRows);
+  buildFilters(allRows);
+  $('kpiSection').style.display='';
+  $('filtersCard').style.display='';
+
+  // ── Auto-show full data table immediately on upload ──
+  currentFiltered = allRows.filter(r=>gv(r,'Agent Comment').length>1);
+  renderLeadTable(currentFiltered.slice(0,1000));
+  renderBreakdown(currentFiltered,'Lead Supervisor','amGrid',true);
+  renderBreakdown(currentFiltered,'Studio','studioGrid',false);
+  renderMarketBreakdown(currentFiltered);
+  renderVerifySummary();
+  $('resultsCtx').textContent = currentFiltered.length.toLocaleString()+' leads · All Studios · All AMs';
+  $('tableCount').textContent = 'Showing '+Math.min(currentFiltered.length,1000).toLocaleString()+' of '+currentFiltered.length.toLocaleString()+' leads';
+  $('resultsTitle').textContent = 'All Leads Overview';
+  $('insightsGrid').innerHTML = '<div style="grid-column:1/-1;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--r);padding:24px;text-align:center;color:var(--text3);font-size:13px;">👆 Use filters above and click <strong style=\'color:var(--accent)\'>✨ Analyze</strong> to get AI insights for your selected segment</div>';
+  $('resultsSection').style.display='';
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI TAGGING (rule-based, instant)
+// ═══════════════════════════════════════════════════════════
+function aiTag(comment){
+  if(aiTagCache[comment]!==undefined)return aiTagCache[comment];
+  const c=comment.toLowerCase().trim();
+  let tag='nc';
+  if(/order.*id|placed.*order|cx placed|order done|order received|order_received|cron/i.test(c))tag='order';
+  else if(/escalat|complaint|refund|return|damaged|defect|fraud/i.test(c))tag='escalate';
+  else if(/(interest|looking for|want to buy|considering|serious|finaliz|planning to|planning a move|shifting)/i.test(c)&&!/not interested/i.test(c))tag='genuine';
+  else if(/interested in buying|interest/i.test(c)&&!/not/i.test(c))tag='interested';
+  else if(/call back|follow.?up|will check|will decide|exploring|few days|callback|ring back/i.test(c))tag='callback';
+  else if(/not interested|ni\b|already (bought|purchased)|locally cancelled|no longer|competitor/i.test(c))tag='ni';
+  else if(/fake|wrong number|test|junk|spam|prank/i.test(c))tag='lazy';
+  else if(/^(ringing|nc|not connected|failure|number.?failure|call went|voicemail|busy|switched off|dialer|calling failure|party did not answer)[^a-z]*$/i.test(c))tag='lazy';
+  else if(c.length<20)tag='lazy';
+  aiTagCache[comment]=tag;
+  return tag;
+}
+
+function aiQuality(comment){
+  const c=comment.trim();
+  if(c.length===0)return 1;
+  const tag=aiTag(c);
+  if(tag==='order')return 5;
+  if(tag==='escalate')return 4;
+  if(tag==='genuine'||tag==='interested')return 4;
+  if(tag==='callback')return 3;
+  if(tag==='ni'&&c.length>30)return 3;
+  if(tag==='ni')return 2;
+  if(tag==='lazy')return 1;
+  if(c.length<10)return 1;
+  if(c.length<30)return 2;
+  return 3;
+}
+
+function autoVerify(comment){
+  const t=aiTag(comment);
+  if(t==='order')return'good';
+  if(t==='escalate')return'escalate';
+  if(t==='genuine'||t==='interested')return'genuine';
+  if(t==='callback')return'followup';
+  if(t==='ni')return'poor';
+  if(t==='lazy')return'lazy';
+  return'pending';
+}
+
+// ═══════════════════════════════════════════════════════════
+// KPI CARDS
+// ═══════════════════════════════════════════════════════════
+function buildKPIs(rows){
+  const total=rows.length;
+  const orders=rows.filter(r=>gv(r,'Stage').match(/order/i)).length;
+  const interested=rows.filter(r=>gv(r,'Stage').match(/interested in buying/i)).length;
+  const connected=rows.filter(r=>gv(r,'Stage').match(/^connected$/i)).length;
+  const cb=rows.filter(r=>gv(r,'Stage').match(/call back/i)).length;
+  const ni=rows.filter(r=>gv(r,'Stage').match(/not.?interested/i)).length;
+  const nc=rows.filter(r=>gv(r,'Stage').match(/non.?contactable|dialer_nc/i)).length;
+  const studios=[...new Set(rows.map(r=>gv(r,'Store Code')).filter(Boolean))];
+  $('kTotal').textContent=total.toLocaleString();
+  $('kOrders').textContent=orders.toLocaleString();
+  $('kOrdersPct').textContent=total>0?Math.round(orders/total*100)+'% conversion':'';
+  $('kInterested').textContent=interested.toLocaleString();
+  $('kConnected').textContent=connected.toLocaleString();
+  $('kCallBack').textContent=cb.toLocaleString();
+  $('kNI').textContent=ni.toLocaleString();
+  $('kNC').textContent=nc.toLocaleString();
+  $('kStudios').textContent=studios.length;
+  buildSmartKPIs(rows);
+}
+
+function buildSmartKPIs(rows){
+  // Highest converting AM
+  const amMap={};
+  rows.forEach(r=>{
+    const info=enrichRow(r),am=info.AM||'Unassigned';
+    if(!amMap[am])amMap[am]={t:0,o:0};
+    amMap[am].t++;
+    if(gv(r,'Stage').match(/order/i))amMap[am].o++;
+  });
+  const amArr=Object.entries(amMap).filter(([,v])=>v.t>=10).sort((a,b)=>b[1].o/b[1].t-a[1].o/a[1].t);
+  const topAM=amArr[0];
+  // Most lost reason
+  const niRows=rows.filter(r=>gv(r,'Stage').match(/not.?interested/i));
+  const reasonMap={};
+  niRows.forEach(r=>{
+    const c=gv(r,'Agent Comment').toLowerCase();
+    let reason='Other';
+    if(/pincode|non.?serviceable/i.test(c))reason='Pincode Not Serviceable';
+    else if(/locally|local market|purchased locally/i.test(c))reason='Bought Locally';
+    else if(/budget|expensive|costly/i.test(c))reason='Budget Issue';
+    else if(/already (bought|purchased)/i.test(c))reason='Already Purchased';
+    else if(/not interested/i.test(c)&&c.length<40)reason='No Reason Given';
+    reasonMap[reason]=(reasonMap[reason]||0)+1;
+  });
+  const topReason=Object.entries(reasonMap).sort((a,b)=>b[1]-a[1])[0];
+  // Follow-up pending %
+  const cbCount=rows.filter(r=>gv(r,'Stage').match(/call back/i)).length;
+  const cbPct=rows.length>0?Math.round(cbCount/rows.length*100):0;
+  // Top market
+  const mktMap={};
+  rows.forEach(r=>{const m=enrichRow(r).MarketType;mktMap[m]=(mktMap[m]||0)+1;});
+  const topMkt=Object.entries(mktMap).sort((a,b)=>b[1]-a[1])[0];
+  // Avg quality
+  const withC=rows.filter(r=>gv(r,'Agent Comment').length>2);
+  const avgQ=withC.length>0?(withC.reduce((s,r)=>s+aiQuality(gv(r,'Agent Comment')),0)/withC.length).toFixed(1):'N/A';
+  // Lazy comment %
+  const lazyCount=withC.filter(r=>aiTag(gv(r,'Agent Comment'))==='lazy').length;
+  const lazyPct=withC.length>0?Math.round(lazyCount/withC.length*100):0;
+
+  $('smartKpiGrid').innerHTML=`
+    <div class="smart-kpi"><div class="sk-icon">🏆</div><div class="sk-label">Highest Converting AM</div><div class="sk-val">${topAM?topAM[0]:'N/A'}</div><div class="sk-sub">${topAM?Math.round(topAM[1].o/topAM[1].t*100)+'% conversion ('+topAM[1].t+' leads)':'—'}</div></div>
+    <div class="smart-kpi"><div class="sk-icon">❌</div><div class="sk-label">Top Lost Reason</div><div class="sk-val">${topReason?topReason[0]:'N/A'}</div><div class="sk-sub">${topReason?topReason[1]+' leads ('+Math.round(topReason[1]/rows.length*100)+'% of total)':'—'}</div></div>
+    <div class="smart-kpi"><div class="sk-icon">⏰</div><div class="sk-label">Follow-up Pending</div><div class="sk-val">${cbPct}% (${cbCount.toLocaleString()} leads)</div><div class="sk-sub">Open callback queue</div></div>
+    <div class="smart-kpi"><div class="sk-icon">🏪</div><div class="sk-label">Top Market Type</div><div class="sk-val">${topMkt?topMkt[0]:'N/A'}</div><div class="sk-sub">${topMkt?topMkt[1].toLocaleString()+' leads':''}</div></div>
+    <div class="smart-kpi"><div class="sk-icon">⭐</div><div class="sk-label">Avg Comment Quality</div><div class="sk-val">${avgQ} / 5</div><div class="sk-sub">AI-scored across all comments</div></div>
+    <div class="smart-kpi"><div class="sk-icon">⚠️</div><div class="sk-label">Lazy Comments</div><div class="sk-val">${lazyPct}% (${lazyCount.toLocaleString()})</div><div class="sk-sub">Single word / no info comments</div></div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════
+function buildCharts(rows){
+  buildFunnel(rows);
+  buildPieCharts(rows);
+}
+
+function buildFunnel(rows){
+  const total=rows.length||1;
+  const steps=[
+    {label:'Total Leads',n:rows.length,color:'#d4500a'},
+    {label:'Connected',n:rows.filter(r=>!gv(r,'Stage').match(/^(dialer_nc|non.?contactable|missed|unassigned|squadstack)/i)).length,color:'#1a5fa8'},
+    {label:'Interested',n:rows.filter(r=>gv(r,'Stage').match(/interested in buying|call back|connected/i)).length,color:'#0d7a7a'},
+    {label:'Visit Planned',n:rows.filter(r=>gv(r,'Stage').match(/visit|appointment/i)).length,color:'#5c3db5'},
+    {label:'Orders',n:rows.filter(r=>gv(r,'Stage').match(/order/i)).length,color:'#2a7a3f'},
+  ];
+  $('funnelWrap').innerHTML=steps.map(s=>{
+    const pct=Math.round(s.n/total*100);
+    const w=Math.max(pct,2);
+    return`<div class="funnel-step">
+      <div class="funnel-lbl">${s.label}</div>
+      <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${w}%;background:${s.color}">${pct}%</div></div>
+      <div class="funnel-num">${s.n.toLocaleString()}</div>
+      <div class="funnel-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function buildPieCharts(rows){
+  // Market type
+  const mktMap={};
+  rows.forEach(r=>{const m=enrichRow(r).MarketType||'Unknown';mktMap[m]=(mktMap[m]||0)+1;});
+  const mktEntries=Object.entries(mktMap);
+  if(marketChartInst)marketChartInst.destroy();
+  marketChartInst=new Chart($('marketChart'),{
+    type:'doughnut',
+    data:{labels:mktEntries.map(e=>e[0]),datasets:[{data:mktEntries.map(e=>e[1]),backgroundColor:['#d4500a','#5c3db5','#1a5fa8','#2a7a3f'],borderWidth:2,borderColor:'#fff'}]},
+    options:{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}}},cutout:'60%'}
+  });
+  // Studio type
+  const stMap={};
+  rows.forEach(r=>{const m=enrichRow(r).StudioType||'Unknown';stMap[m]=(stMap[m]||0)+1;});
+  const stEntries=Object.entries(stMap);
+  if(studioTypeChartInst)studioTypeChartInst.destroy();
+  studioTypeChartInst=new Chart($('studioTypeChart'),{
+    type:'doughnut',
+    data:{labels:stEntries.map(e=>e[0]),datasets:[{data:stEntries.map(e=>e[1]),backgroundColor:['#1a5fa8','#ef9f27','#2a7a3f','#5c3db5'],borderWidth:2,borderColor:'#fff'}]},
+    options:{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}}},cutout:'60%'}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════════════════
+function buildFilters(rows){
+  const studios=[...new Set(rows.map(r=>gv(r,'Studio')).filter(Boolean))].sort();
+  const cities=[...new Set(rows.map(r=>gv(r,'Studio City')).filter(x=>x&&x!=='-'))].sort();
+  const ams=[...new Set(STORE_MAP.map(s=>s.AM).filter(Boolean))].sort();
+  const stages=[...new Set(rows.map(r=>gv(r,'Stage')).filter(Boolean))].sort();
+  popSel('fStudio',studios,'All Studios');
+  popSel('fCity',cities,'All Cities');
+  popSel('fAM',ams,'All AMs');
+  popSel('fStage',stages,'All Stages');
+}
+function popSel(id,vals,ph){const s=$(id);s.innerHTML=`<option value="">${ph}</option>`;vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});}
+
+function resetFilters(){
+  ['fStudio','fCity','fAM','fMarket','fStudioType','fStatus','fStage','fAITag','fVerify'].forEach(id=>$(id).value='');
+  $('fLeadId').value='';$('fDateFrom').value='';$('fDateTo').value='';
+}
+
+function getFiltered(){
+  const studio=$('fStudio').value,city=$('fCity').value,am=$('fAM').value;
+  const market=$('fMarket').value,sttype=$('fStudioType').value;
+  const status=$('fStatus').value,stage=$('fStage').value;
+  const aitag=$('fAITag').value,verify=$('fVerify').value;
+  const ids=$('fLeadId').value.split(',').map(x=>x.trim()).filter(Boolean);
+  const df=$('fDateFrom').value,dt=$('fDateTo').value;
+
+  return allRows.filter(r=>{
+    if(!gv(r,'Agent Comment')||gv(r,'Agent Comment').length<2)return false;
+    const info=enrichRow(r);
+    if(studio&&gv(r,'Studio')!==studio)return false;
+    if(city&&gv(r,'Studio City')!==city)return false;
+    if(am&&info.AM!==am)return false;
+    if(market&&info.MarketType!==market)return false;
+    if(sttype&&info.StudioType!==sttype)return false;
+    if(status&&gv(r,'Status')!==status)return false;
+    if(stage&&gv(r,'Stage')!==stage)return false;
+    if(ids.length&&!ids.includes(gv(r,'Id')))return false;
+    if(aitag&&aiTag(gv(r,'Agent Comment'))!==aitag)return false;
+    const vKey=gv(r,'Id');
+    if(verify&&(verifyMap[vKey]||autoVerify(gv(r,'Agent Comment')))!==verify)return false;
+    if(df){const d=parseDate(gv(r,'Created At'));if(!d||d<new Date(df))return false;}
+    if(dt){const d=parseDate(gv(r,'Created At'));if(!d||d>new Date(dt+'T23:59:59'))return false;}
+    return true;
+  });
+}
+
+function parseDate(s){
+  if(!s)return null;
+  const m=s.match(/(\d{2})-(\d{2})-(\d{4})/);
+  if(m)return new Date(m[3]+'-'+m[2]+'-'+m[1]);
+  return new Date(s);
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN ANALYSIS
+// ═══════════════════════════════════════════════════════════
+async function runAnalysis(){
+  const btn=$('analyzeBtn');
+  btn.disabled=true;btn.innerHTML='<div class="spin"></div><span>Analyzing…</span>';
+  hideErr();
+  currentFiltered=getFiltered();
+  if(!currentFiltered.length){showErr('No leads match your filters.');btn.disabled=false;btn.innerHTML='<span>✨ Analyze</span>';return;}
+
+  // Update funnel & charts for filtered set
+  buildFunnel(currentFiltered);
+  buildPieCharts(currentFiltered);
+  buildSmartKPIs(currentFiltered);
+
+  renderLeadTable(currentFiltered.slice(0,700));
+  renderBreakdown(currentFiltered,'Lead Supervisor','amGrid',true);
+  renderBreakdown(currentFiltered,'Studio','studioGrid',false);
+  renderMarketBreakdown(currentFiltered);
+  renderVerifySummary();
+  $('resultsSection').style.display='';
+
+  const amLabel=$('fAM').value||'All AMs';
+  const sLabel=$('fStudio').value||'All Studios';
+  $('resultsCtx').textContent=`${currentFiltered.length.toLocaleString()} leads · ${sLabel} · ${amLabel}`;
+  $('tableCount').textContent=`Showing ${Math.min(currentFiltered.length,700).toLocaleString()} of ${currentFiltered.length.toLocaleString()} leads`;
+
+  await fetchAIInsights(currentFiltered);
+  btn.disabled=false;btn.innerHTML='<span>✨ Re-Analyze</span>';
+  $('resultsSection').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI INSIGHTS via Claude API
+// ═══════════════════════════════════════════════════════════
+async function fetchAIInsights(rows){
+  $('insightsGrid').innerHTML=`<div class="loading-pulse"><div>🤖</div>AI is reading ${Math.min(rows.length,250)} agent comments…<br><small style="font-size:11px;margin-top:6px;display:block;color:var(--text3)">Classifying patterns, quality issues, escalations…</small></div>`;
+
+  const sample=rows.slice(0,250);
+  const amF=$('fAM').value||'all AMs';
+  const mktF=$('fMarket').value||'all markets';
+
+  // Prepare context with enriched data
+  const lines=sample.map((r,i)=>{
+    const id=gv(r,'Id'),name=gv(r,'Name')||'?';
+    const info=enrichRow(r);
+    const am=info.AM||'—',mkt=info.MarketType||'—',studio=gv(r,'Studio')||'—';
+    const status=gv(r,'Status'),stage=gv(r,'Stage'),comment=gv(r,'Agent Comment');
+    const tag=aiTag(comment),q=aiQuality(comment);
+    return`${i+1}. [ID:${id}][${mkt}][${studio}][AM:${am}][${status}/${stage}][AI:${tag},Q:${q}] ${name}: ${comment}`;
+  }).join('\n');
+
+  const prompt=`You are a senior sales analytics manager at Pepperfry (Indian furniture company). Your job is to evaluate AGENT WORK QUALITY — are agents actually working leads or giving lazy/fake updates?
+
+Analyze ${sample.length} leads (filter: AM=${amF}, market=${mktF}, total filtered leads=${rows.length}).
+
+${lines}
+
+CRITICAL MISSION: Your main goal is to identify:
+1. Are agents genuinely working leads or just marking "ringing"/"NC" without effort?
+2. Which agents/AMs have poor comment quality?
+3. Which leads have real buying intent that aren't being followed up?
+4. What patterns explain wins and losses?
+
+Generate exactly 8 targeted insights. Categories: Won | Lost | Follow-up needed | Contact failed | Issue | Opportunity | Pattern | Agent Quality
+
+Rules:
+- Be SPECIFIC — name patterns, reference comment types you saw
+- Flag lazy commenting (single word, no context, "ringing" only)
+- Identify genuine buying intent that needs action
+- Compare comment quality across AMs/studios if visible
+- Mention real counts/percentages
+- 2-3 sentences per insight, actionable
+
+Return ONLY valid JSON array, no markdown:
+[{"title":"...","body":"...","category":"...","count":"...","am":"..."}]`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1800,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error?.message||'API error '+resp.status);
+    const text=data.content.map(b=>b.text||'').join('');
+    let ins;
+    try{ins=JSON.parse(text.replace(/```json|```/g,'').trim());}
+    catch{const m=text.match(/\[[\s\S]*\]/);if(m)ins=JSON.parse(m[0]);else throw new Error('Parse failed');}
+    renderInsights(ins);
+  }catch(err){
+    $('insightsGrid').innerHTML='';
+    showErr('AI analysis failed: '+err.message);
+  }
+}
+
+const catMap={'Won':'bwon','Lost':'blost','Follow-up needed':'bfu','Issue':'bissue','Contact failed':'bcf','Opportunity':'bopp','Pattern':'bpat','Agent Quality':'bissue'};
+const catEmoji={'Won':'✅','Lost':'❌','Follow-up needed':'⏰','Issue':'⚠️','Contact failed':'📵','Opportunity':'🎯','Pattern':'📈','Agent Quality':'🔍'};
+
+function renderInsights(ins){
+  $('insightsGrid').innerHTML=ins.map(i=>{
+    const cls=catMap[i.category]||'bopp',em=catEmoji[i.category]||'💡';
+    const pills=[i.count,i.am].filter(Boolean).map(x=>`<span class="mp">${x}</span>`).join('');
+    return`<div class="ic"><div class="ict"><div class="ictitle">${em} ${i.title}</div><span class="badge ${cls}">${i.category}</span></div><p class="icbody">${i.body}</p>${pills?`<div class="icmeta">${pills}</div>`:''}</div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// BREAKDOWNS
+// ═══════════════════════════════════════════════════════════
+function renderBreakdown(rows,colName,gridId,isAM){
+  const map={};
+  rows.forEach(r=>{
+    const k=isAM?(enrichRow(r).AM||'Unassigned'):gv(r,colName)||'Unknown';
+    if(!map[k])map[k]={total:0,orders:0,ni:0,open:0,nc:0,lazy:0,q:[]};
+    map[k].total++;
+    const comment=gv(r,'Agent Comment');
+    if(gv(r,'Stage').match(/order/i))map[k].orders++;
+    if(gv(r,'Stage').match(/not.?interested/i))map[k].ni++;
+    if(gv(r,'Status')==='Open')map[k].open++;
+    if(gv(r,'Stage').match(/non.?contactable|dialer_nc/i))map[k].nc++;
+    if(aiTag(comment)==='lazy')map[k].lazy++;
+    if(comment)map[k].q.push(aiQuality(comment));
+  });
+  const sorted=Object.entries(map).sort((a,b)=>b[1].total-a[1].total).slice(0,28);
+  const maxT=Math.max(...sorted.map(([,v])=>v.total))||1;
+  $(gridId).innerHTML=sorted.map(([name,v])=>{
+    const conv=v.total>0?Math.round(v.orders/v.total*100):0;
+    const avgQ=v.q.length>0?(v.q.reduce((a,b)=>a+b,0)/v.q.length).toFixed(1):'—';
+    const lazyPct=v.total>0?Math.round(v.lazy/v.total*100):0;
+    const lazyColor=lazyPct>40?'var(--red)':lazyPct>20?'var(--amber)':'var(--green)';
+    return`<div class="bkcard">
+      <div class="bn" title="${name}">${isAM?'👤 ':''} ${name}</div>
+      <div class="bs">${v.total.toLocaleString()} leads · ${conv}% conv · Avg Q: ${avgQ}</div>
+      <div class="badge-row">
+        <span class="badge" style="background:var(--green-bg);color:var(--green)">${v.orders} Orders</span>
+        <span class="badge" style="background:#f8d7da;color:#721c24;font-size:10px">⚠️ ${lazyPct}% lazy</span>
+      </div>
+      <div class="sbars">
+        <div class="srow"><span class="slbl">Orders</span><div class="sbw"><div class="sb g" style="width:${Math.round(v.orders/maxT*100)}%"></div></div><span class="sval" style="color:var(--green)">${v.orders}</span></div>
+        <div class="srow"><span class="slbl">Open/Pending</span><div class="sbw"><div class="sb a" style="width:${Math.round(v.open/maxT*100)}%"></div></div><span class="sval" style="color:var(--amber)">${v.open}</span></div>
+        <div class="srow"><span class="slbl">Not Interested</span><div class="sbw"><div class="sb r" style="width:${Math.round(v.ni/maxT*100)}%"></div></div><span class="sval" style="color:var(--red)">${v.ni}</span></div>
+        <div class="srow"><span class="slbl">No Contact</span><div class="sbw"><div class="sb b" style="width:${Math.round(v.nc/maxT*100)}%"></div></div><span class="sval" style="color:var(--blue)">${v.nc}</span></div>
+        <div class="srow"><span class="slbl">Lazy Comments</span><div class="sbw"><div class="sb p" style="width:${Math.round(v.lazy/maxT*100)}%"></div></div><span class="sval" style="color:${lazyColor}">${v.lazy}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMarketBreakdown(rows){
+  const types=['Company Owned','Franchise','Buy On Phone','Unknown'];
+  const map={};
+  rows.forEach(r=>{
+    const m=enrichRow(r).MarketType||'Unknown';
+    if(!map[m])map[m]={total:0,orders:0,ni:0,nc:0,lazy:0};
+    map[m].total++;
+    if(gv(r,'Stage').match(/order/i))map[m].orders++;
+    if(gv(r,'Stage').match(/not.?interested/i))map[m].ni++;
+    if(gv(r,'Stage').match(/non.?contactable|dialer_nc/i))map[m].nc++;
+    if(aiTag(gv(r,'Agent Comment'))==='lazy')map[m].lazy++;
+  });
+  const maxT=Math.max(...Object.values(map).map(v=>v.total))||1;
+  const icons={'Company Owned':'🏢','Franchise':'🤝','Buy On Phone':'📞','Unknown':'❓'};
+  $('marketGrid').innerHTML=Object.entries(map).map(([name,v])=>{
+    const conv=v.total>0?Math.round(v.orders/v.total*100):0;
+    return`<div class="bkcard">
+      <div class="bn">${icons[name]||''} ${name}</div>
+      <div class="bs">${v.total.toLocaleString()} leads · ${conv}% conversion</div>
+      <div class="sbars">
+        <div class="srow"><span class="slbl">Orders</span><div class="sbw"><div class="sb g" style="width:${Math.round(v.orders/maxT*100)}%"></div></div><span class="sval" style="color:var(--green)">${v.orders}</span></div>
+        <div class="srow"><span class="slbl">Not Interested</span><div class="sbw"><div class="sb r" style="width:${Math.round(v.ni/maxT*100)}%"></div></div><span class="sval" style="color:var(--red)">${v.ni}</span></div>
+        <div class="srow"><span class="slbl">No Contact</span><div class="sbw"><div class="sb b" style="width:${Math.round(v.nc/maxT*100)}%"></div></div><span class="sval" style="color:var(--blue)">${v.nc}</span></div>
+        <div class="srow"><span class="slbl">Lazy Comments</span><div class="sbw"><div class="sb p" style="width:${Math.round(v.lazy/maxT*100)}%"></div></div><span class="sval" style="color:var(--purple)">${v.lazy}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(name){
+  document.querySelectorAll('.btab').forEach((t,i)=>{const ns=['am','studio','market','verify'];t.classList.toggle('active',ns[i]===name);});
+  ['paneAM','paneStudio','paneMarket','paneVerify'].forEach(id=>{$(id).classList.toggle('active',id==='pane'+name.charAt(0).toUpperCase()+name.slice(1));});
+  if(name==='verify')renderVerifySummary();
+}
+
+// ═══════════════════════════════════════════════════════════
+// VERIFY SUMMARY
+// ═══════════════════════════════════════════════════════════
+const vLabels={pending:'⬜ Pending',good:'✅ Good',poor:'❌ Poor',followup:'⏰ Follow-up',escalate:'🔴 Escalate',lazy:'⚠️ Lazy',genuine:'💬 Genuine'};
+const vColors={pending:'#bbb',good:'#2a7a3f',poor:'#b03030',followup:'#8a5c0a',escalate:'#5c3db5',lazy:'#8b0000',genuine:'#0d7a7a'};
+
+function renderVerifySummary(){
+  const counts={pending:0,good:0,poor:0,followup:0,escalate:0,lazy:0,genuine:0};
+  currentFiltered.forEach(r=>{
+    const id=gv(r,'Id');
+    const v=verifyMap[id]||autoVerify(gv(r,'Agent Comment'));
+    counts[v]=(counts[v]||0)+1;
+  });
+  $('verifySummary').innerHTML=Object.entries(counts).map(([k,v])=>
+    `<div class="vsbox"><div class="vsnum" style="color:${vColors[k]}">${v}</div><div class="vslbl">${vLabels[k]}</div></div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// VERIFY CHANGE
+// ═══════════════════════════════════════════════════════════
+const vsCls={pending:'p',good:'g',poor:'r',followup:'f',escalate:'e',lazy:'fk',genuine:'ge'};
+function onVerify(id,val){
+  verifyMap[id]=val;
+  const s=document.getElementById('vs_'+id);
+  if(s)s.className='vsel vs'+(vsCls[val]||'p');
+}
+
+// ═══════════════════════════════════════════════════════════
+// LEAD TABLE
+// ═══════════════════════════════════════════════════════════
+const vsOpts=`<option value="pending">⬜ Pending</option>
+<option value="good">✅ Good Comment</option>
+<option value="poor">❌ Poor/Incomplete</option>
+<option value="followup">⏰ Follow-up Needed</option>
+<option value="escalate">🔴 Escalate</option>
+<option value="lazy">⚠️ Lazy Comment</option>
+<option value="genuine">💬 Genuine Interest</option>`;
+
+const aiTagLabels={order:'order',interested:'interested',callback:'callback',ni:'ni',nc:'nc',lazy:'lazy',escalate:'escalate',genuine:'genuine'};
+const aiTagClasses={order:'ai-order',interested:'ai-interested',callback:'ai-callback',ni:'ai-ni',nc:'ai-nc',lazy:'ai-lazy',escalate:'ai-escalate',genuine:'ai-genuine'};
+const aiTagText={order:'✅ Order',interested:'🎯 Interested',callback:'⏰ Callback',ni:'❌ Not Interested',nc:'📵 NC',lazy:'⚠️ Lazy',escalate:'🔴 Escalate',genuine:'💬 Genuine'};
+
+function renderLeadTable(rows){
+  $('leadTableBody').innerHTML=rows.map(r=>{
+    const id=gv(r,'Id'),status=gv(r,'Status');
+    const sCls=status==='Closed'?'sc':'so';
+    const comment=gv(r,'Agent Comment');
+    const info=enrichRow(r);
+    const tag=aiTag(comment);
+    const q=aiQuality(comment);
+    const vkey=verifyMap[id]||autoVerify(comment);
+    if(!verifyMap[id])verifyMap[id]=vkey;
+    const vcls='vsel vs'+(vsCls[vkey]||'p');
+    const mtCls={'Mega Markets':'mtp-co','Emerging Markets':'mtp-fr','Buy On Phone':'mtp-bop'}[info.MarketType]||'';
+    return`<tr>
+      <td class="tdid">${id}</td>
+      <td class="tdname" title="${gv(r,'Name')}">${gv(r,'Name')||'—'}</td>
+      <td class="tdstudio" title="${gv(r,'Studio')}">${gv(r,'Studio')||'—'}</td>
+      <td style="font-size:11px;white-space:nowrap;">${gv(r,'Studio City')||'—'}</td>
+      <td><span class="mtp ${mtCls}">${info.MarketType||'—'}</span></td>
+      <td class="tdam" title="${info.AM}">${info.AM||'—'}</td>
+      <td class="tdam" title="${gv(r,'Assignee')}">${gv(r,'Assignee')||'—'}</td>
+      <td><span class="spill ${sCls}">${status}</span></td>
+      <td style="font-size:11px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis;">${gv(r,'Stage')||'—'}</td>
+      <td class="tdcomment"><span class="ctext" onclick="this.classList.toggle('exp')" title="Click to expand">${comment||'—'}</span></td>
+      <td><span class="ai-tag ${aiTagClasses[tag]||''}">${aiTagText[tag]||tag}</span></td>
+      <td><span class="qscore qs-${q}"><span class="qs-dot qs-${q}"></span>${q}/5</span></td>
+      <td><select id="vs_${id}" class="${vcls}" onchange="onVerify('${id}',this.value)">${vsOpts}</select></td>
+    </tr>`;
+  }).join('');
+  rows.forEach(r=>{const id=gv(r,'Id'),s=document.getElementById('vs_'+id);if(s&&verifyMap[id])s.value=verifyMap[id];});
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════
+function quickSearch(q){
+  const term=q.toLowerCase().trim();
+  const rows=document.querySelectorAll('#leadTableBody tr');
+  let visible=0;
+  rows.forEach(tr=>{
+    const text=tr.textContent.toLowerCase();
+    const show=!term||text.includes(term);
+    tr.style.display=show?'':'none';
+    if(show)visible++;
+  });
+  $('searchCount').textContent=term?visible+' results':'';
+}
+
+function copyTableToClipboard(){
+  if(!currentFiltered.length)return;
+  const hdr=['Lead ID','Name','Studio','City','Store Code','Market Type','Studio Type','Area Manager','Agent','Status','Stage','Agent Comment','AI Classification','Quality Score','Verification'];
+  const body=currentFiltered.slice(0,500).map(r=>{
+    const id=gv(r,'Id'),info=enrichRow(r),comment=gv(r,'Agent Comment');
+    return[id,gv(r,'Name'),gv(r,'Studio'),gv(r,'Studio City'),gv(r,'Store Code'),info.MarketType,info.StudioType,info.AM,gv(r,'Assignee'),gv(r,'Status'),gv(r,'Stage'),comment,aiTag(comment),aiQuality(comment),verifyMap[id]||autoVerify(comment)].join('	');
+  });
+  navigator.clipboard.writeText(hdr.join('	')+'
+'+body.join('
+')).then(()=>alert('✅ Copied '+Math.min(currentFiltered.length,500)+' rows! Paste directly into Excel.')).catch(()=>alert('Copy failed — use Export instead.'));
+}
+
+function exportCSV(){
+  if(!currentFiltered.length)return;
+  const hdr=['Lead ID','Name','Studio','City','Store Code','Market Type','Studio Type','Area Manager','Agent','Status','Stage','Agent Comment','AI Classification','Quality Score (1-5)','Verification Tag'];
+  const body=currentFiltered.map(r=>{
+    const id=gv(r,'Id'),info=enrichRow(r),comment=gv(r,'Agent Comment');
+    return[id,gv(r,'Name'),gv(r,'Studio'),gv(r,'Studio City'),gv(r,'Store Code'),info.MarketType,info.StudioType,info.AM,gv(r,'Assignee'),gv(r,'Status'),gv(r,'Stage'),'"'+comment.replace(/"/g,'""')+'"',aiTag(comment),aiQuality(comment),verifyMap[id]||autoVerify(comment)].join(',');
+  });
+  const blob=new Blob(['\uFEFF'+hdr.join(',')+'\n'+body.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='leads_intelligence_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+</script>
+</body>
+</html>
